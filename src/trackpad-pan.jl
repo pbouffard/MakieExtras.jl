@@ -1,7 +1,7 @@
 using Makie: RefValue, Axis, Consume, camera, pixelarea, Rectf, Vec2f, Automatic, ScrollEvent, deregister_interaction!, register_interaction!, Vec4f, Vec, Makie, widths, timed_ticklabelspace_reset, ispressed, events
 import Makie: process_interaction
 
-struct ScrollPan
+struct TrackpadPan
     speed::Float32
     reset_timer::RefValue{Union{Nothing,Timer}}
     prev_xticklabelspace::RefValue{Union{Automatic,Float64}}
@@ -9,13 +9,13 @@ struct ScrollPan
     reset_delay::Float32
 end
 
-function ScrollPan(speed, reset_delay)
-    return ScrollPan(speed, RefValue{Union{Nothing,Timer}}(nothing), RefValue{Union{Automatic,Float64}}(0.0), RefValue{Union{Automatic,Float64}}(0.0), reset_delay)
+function TrackpadPan(speed, reset_delay)
+    return TrackpadPan(speed, RefValue{Union{Nothing,Timer}}(nothing), RefValue{Union{Automatic,Float64}}(0.0), RefValue{Union{Automatic,Float64}}(0.0), reset_delay)
 end
 
 scrollzoomkey = Makie.Or(Makie.Keyboard.left_shift | Makie.Keyboard.right_shift)
 
-function process_interaction(sp::ScrollPan, event::ScrollEvent, ax::Axis)
+function process_interaction(sp::TrackpadPan, event::ScrollEvent, ax::Axis)
 
 
     if ispressed(ax.scene, scrollzoomkey)
@@ -74,7 +74,7 @@ end
 function Makie.process_interaction(s::MakieExtrasScrollZoom, event::ScrollEvent, ax::Axis)
 
     if !ispressed(ax.scene, scrollzoomkey)
-      return Consume(false)
+        return Consume(false)
     end
 
     # use vertical zoom
@@ -93,16 +93,16 @@ function Makie.process_interaction(s::MakieExtrasScrollZoom, event::ScrollEvent,
     if zoom != 0
         pa = pixelarea(scene)[]
 
-        z = max(0.1f0, 1f0 - s.speed)^zoom
+        z = max(0.1f0, 1.0f0 - s.speed)^zoom
 
         mp_axscene = Vec4f((e.mouseposition[] .- pa.origin)..., 0, 1)
 
         # first to normal -1..1 space
-        mp_axfraction =  (cam.pixel_space[] * mp_axscene)[Vec(1, 2)] .*
-            # now to 1..-1 if an axis is reversed to correct zoom point
-            (-2 .* ((ax.xreversed[], ax.yreversed[])) .+ 1) .*
-            # now to 0..1
-            0.5 .+ 0.5
+        mp_axfraction = (cam.pixel_space[]*mp_axscene)[Vec(1, 2)] .*
+                        # now to 1..-1 if an axis is reversed to correct zoom point
+                        (-2 .* ((ax.xreversed[], ax.yreversed[])) .+ 1) .*
+                        # now to 0..1
+                        0.5 .+ 0.5
 
         xscale = ax.xscale[]
         yscale = ax.yscale[]
@@ -140,8 +140,11 @@ function Makie.process_interaction(s::MakieExtrasScrollZoom, event::ScrollEvent,
     return Consume(true)
 end
 
-function set_scroll_to_pan!(ax::Axis)
-    register_interaction!(ax, :scrollpan, ScrollPan(100.0, 0.5))
+"""
+Set up an axis for trackpad panning. This will disable the default scroll-to-zoom and instead allow you to pan the axis by dragging with two fingers on a trackpad. Zooming with two fingers will work with the shift key pressed.
+"""
+function set_trackpad_pan!(ax::Axis)
+    register_interaction!(ax, :TrackpadPan, TrackpadPan(100.0, 0.5))
     deregister_interaction!(ax, :scrollzoom)
-    register_interaction!(ax, :makieextrasscrollzoom, MakieExtrasScrollZoom(0.2     , 0.2))
+    register_interaction!(ax, :makieextrasscrollzoom, MakieExtrasScrollZoom(0.2, 0.2))
 end

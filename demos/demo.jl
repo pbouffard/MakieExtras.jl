@@ -10,3 +10,16 @@ function demo_trackpad_pan()
     display(fig)
     return fig, ax, plt
 end
+
+function demo_plotseries()
+    GLMakie.activate!(; inline=false, focus_on_show = true)
+    t = 1:1000
+    x = cumsum(randn(12, 1000), dims = 2)
+    fig, ax = plotseries!(t, x)
+    ax.title = "Plot series"
+    ax.xlabel = "Time"
+    ax.ylabel = "Value"
+    DataInspector(ax)
+    display(fig)
+    return fig, ax
+end
